@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Furnace", "Furnace.csproj", "{BAAD4A2A-A182-474B-ACD0-CE184E78F7D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityAssetsLib", "..\UnityAssetsLib\UnityAssetsLib.csproj", "{80C8015B-C77F-4EF4-B518-D81F710054B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetLibTest", "..\AssetLibTest\AssetLibTest.csproj", "{0E728469-DAC9-412B-ADF6-B6EFFBC6FB9D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BAAD4A2A-A182-474B-ACD0-CE184E78F7D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAAD4A2A-A182-474B-ACD0-CE184E78F7D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAAD4A2A-A182-474B-ACD0-CE184E78F7D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAAD4A2A-A182-474B-ACD0-CE184E78F7D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80C8015B-C77F-4EF4-B518-D81F710054B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80C8015B-C77F-4EF4-B518-D81F710054B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80C8015B-C77F-4EF4-B518-D81F710054B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80C8015B-C77F-4EF4-B518-D81F710054B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E728469-DAC9-412B-ADF6-B6EFFBC6FB9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E728469-DAC9-412B-ADF6-B6EFFBC6FB9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E728469-DAC9-412B-ADF6-B6EFFBC6FB9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E728469-DAC9-412B-ADF6-B6EFFBC6FB9D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

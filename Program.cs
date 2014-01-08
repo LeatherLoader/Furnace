@@ -26,142 +26,64 @@ namespace Furnace
                 Console.WriteLine("Could not locate mainData file.");
                 return;
             }
+            SwappableEndianBinaryReader reader = new SwappableEndianBinaryReader(File.OpenRead("mainData"));
+            AssetsFile file = new AssetsFile();
+            file.Read(reader);
+            reader.Close();
 
-            //Read from file into memory stream
-            byte[] mainDataBytes = File.ReadAllBytes("mainData");
-
-            MemoryStream inStream = new MemoryStream(mainDataBytes);
-            SwappableEndianBinaryReader reader = new SwappableEndianBinaryReader(inStream);
-
-            //Parse header section
-            AssetHeader header = new AssetHeader();
-            header.Read(reader);
-
-            //Locate & mark the UI Root or RustServer game object
-            bool foundConnector = false;
-            uint connectorIndex = 0;
-
-            foreach (ObjectInfo obj in header.FileData)
+            List<MonoScript> scriptsToRemove = new List<MonoScript>();
+            foreach (UnityType obj in file.Objects)
             {
-                if (obj.ClassId == 1)
+                if (obj is MonoManager)
                 {
-                    inStream.Position = header.OldDataStart + obj.OldOffset;
-                    uint componentCount = reader.ReadUInt32();
-                    //Skip components
-                    inStream.Position += (12 * componentCount);
-                    //Layer
-                    reader.ReadUInt32();
-                    string name = reader.ReadUnityString();
+                    MonoManager manager = (MonoManager)obj;
 
-
-                    if (!string.IsNullOrEmpty(name) && (name.Equals("UI Root") || name.Equals("RustServer")))
+                    for (int assIndex = manager.Assemblies.Count - 1; assIndex >= 0; assIndex--)
                     {
-                        foundConnector = true;
-                        connectorIndex = obj.Index;
-                        break;
-                    }
-                }
-            }
-
-            if (!foundConnector)
-            {
-                Console.WriteLine("Could not locate GameObject to attach bootstrapper to.");
-                return;
-            }
-
-            //Make changes
-            MonoBehaviour behavior = new MonoBehaviour(0, connectorIndex, 0, (uint)(header.FileData.Count() + 2), "");
-            MonoScript script = new MonoScript("ModBootstrapper", 1199, 0, "ModBootstrapper", "LeatherLoader", System.IO.Path.Combine("..","LeatherLoader"), 0);
-
-            //Locate & mark the first MonoManager in the file
-            bool foundManager = false;
-            uint managerIndex = 0;
-            uint managerAdditionSize = 4 + UnityHelper.ByteAlign((uint)script.Assembly.Length, 4);
-
-            foreach (ObjectInfo obj in header.FileData)
-            {
-                if (obj.ClassId == 116)
-                {
-                    foundManager = true;
-                    managerIndex = obj.Index;
-                    break;
-                }
-            }
-
-            if (!foundManager)
-            {
-                Console.WriteLine("Could not locate MonoManager.");
-                return;
-            }
-
-            header.AdjustObjectSize((int)managerIndex, managerAdditionSize);
-
-            header.AddObject(behavior);
-            header.AddObject(script);
-
-            //Write the header out to a new memory stream with a new external file and the size of __EDITOR_CONNECTOR increased
-            MemoryStream outStream = new MemoryStream();
-            SwappableEndianBinaryWriter writer = new SwappableEndianBinaryWriter(outStream);
-
-            header.Write(writer);
-
-            List<ObjectInfo> sortedInfos = header.FileData.ToList();
-            for (int i = 0; i < sortedInfos.Count-2; i++)
-            {
-                uint endPosition = header.FileSize;
-
-                if ((i+1) < sortedInfos.Count)
-                {
-                    endPosition = header.NewDataStart + sortedInfos[(i + 1)].NewOffset;
-                }
-
-                if (sortedInfos[i].Index == managerIndex)
-                {
-                    //Write out modified manager object
-
-                    //Set the inptu stream to the manager's position
-                    inStream.Position = header.OldDataStart + sortedInfos[i].OldOffset;
-
-                    //Read old script count, write new script count
-                    uint scriptLength = reader.ReadUInt32();
-                    writer.Write((uint)scriptLength);
-
-                    //Write script refs
-                    byte[] oldScriptRefs = reader.ReadBytes((int)(scriptLength * 8));
-                    writer.Write(oldScriptRefs);
-
-                    //Read old assembly count, write new assembly count
-                    uint assemblyLength = reader.ReadUInt32();
-                    writer.Write((uint)assemblyLength + 1);
-
-                    //Write old assembly names
-                    for(uint j = 0; j < assemblyLength; j++)
-                    {
-                        string name = reader.ReadUnityString();
-                        writer.WriteUnityString(name);
+                        if (manager.Assemblies[assIndex].IndexOf("Leather", StringComparison.OrdinalIgnoreCase) >= 0 || manager.Assemblies[assIndex].IndexOf("Neolith", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            manager.Assemblies.RemoveAt(assIndex);
+                        }
                     }
 
-                    writer.WriteUnityString(script.Assembly);
+                    manager.Assemblies.Add("NeolithLoader.dll");
                 }
-                else
+                else if (obj is MonoScript)
                 {
-                    //Write the bytes out in a straightforward manner
-                    writer.Write(mainDataBytes, (int)(header.OldDataStart + sortedInfos[i].OldOffset), (int)sortedInfos[i].OldSize);
-                }
+                    MonoScript script = (MonoScript)obj;
 
-                //Write post-object padding
-                while (outStream.Position < endPosition) { writer.Write((byte)0); }
+                    if (script.Assembly.IndexOf("Leather", StringComparison.OrdinalIgnoreCase) >= 0 || script.Assembly.IndexOf("Neolith", StringComparison.OrdinalIgnoreCase) >= 0)
+                        scriptsToRemove.Add(script);
+                }
             }
 
-            behavior.Write(writer);
-            script.Write(writer);
+            List<uint> scriptLocalIndexes = new List<uint>();
+            foreach (MonoScript script in scriptsToRemove)
+            {
+                scriptLocalIndexes.Add(script.Info.Index);
+                file.Objects.Remove(script);
+            }
 
-            byte[] outData = outStream.GetBuffer();
+            List<MonoBehaviour> behavioursToRemove = new List<MonoBehaviour>();
+            foreach (UnityType obj in file.Objects)
+            {
+                if (obj is MonoBehaviour)
+                {
+                    MonoBehaviour behaviour = (MonoBehaviour)obj;
+                    if (behaviour.ScriptFileIndex == 0 && scriptLocalIndexes.Contains(behaviour.ScriptLocalIndex))
+                        behavioursToRemove.Add(behaviour);
+                }
+            }
 
-            FileStream stream = File.OpenWrite("mainData");
-            stream.Write(outData, 0, (int)outStream.Length);
-            Console.WriteLine("mainData modified!");
-            return;
+            foreach (MonoBehaviour behaviour in behavioursToRemove)
+                file.Objects.Remove(behaviour);
+
+            // TODO
+            //file.ReIndex();
+
+            SwappableEndianBinaryWriter writer = new SwappableEndianBinaryWriter(File.Open("mainData-2", FileMode.Create));
+            file.Write(writer);
+            writer.Close();
         }
     }
 }
